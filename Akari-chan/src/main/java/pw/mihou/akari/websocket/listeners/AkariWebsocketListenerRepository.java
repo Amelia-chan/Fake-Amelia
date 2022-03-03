@@ -1,0 +1,34 @@
+package pw.mihou.akari.websocket.listeners;
+
+import io.javalin.websocket.WsMessageContext;
+import org.json.JSONObject;
+import pw.mihou.alisa.modules.AlisaMessage;
+import pw.mihou.alisa.modules.exceptions.AlisaException;
+import pw.mihou.alisa.modules.threadpools.AlisaThreadPool;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class AkariWebsocketListenerRepository {
+
+    public static final List<AkariWebsocketListener> listeners = new ArrayList<>();
+
+    /**
+     * Gets all the listener that matches the message that was received.
+     *
+     * @param connection   The connection that was received on the server.
+     */
+    public static void send(WsMessageContext connection) {
+        try {
+            JSONObject raw = new JSONObject(connection.message());
+            AlisaMessage message = new AlisaMessage(raw.getString("data"), raw.getString("className"));
+
+            listeners.stream()
+                    .filter(listener -> listener.accepts().equals(message.className()))
+                    .forEach(listener -> AlisaThreadPool.submitTask(() -> listener.onMessage(connection, connection.message())));
+        } catch (Exception e) {
+            connection.send(new AlisaMessage(new AlisaException(e.getMessage()), AlisaException.class.getName()));
+        }
+    }
+
+}

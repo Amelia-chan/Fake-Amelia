@@ -2,8 +2,13 @@ package pw.mihou.alisa.modules.rss.properties;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 public record AlisaRssProperty(
         @Nonnull String name,
@@ -80,6 +85,19 @@ public record AlisaRssProperty(
         return Optional.empty();
     }
 
+    public Optional<Date> asDate(SimpleDateFormat formatter) {
+        if (value == null) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(formatter.parse(value));
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
+
     /**
      * Gets the first property that has the name specified.
      *
@@ -102,6 +120,19 @@ public record AlisaRssProperty(
         return properties.stream()
                 .filter(property -> property.name().equalsIgnoreCase(name))
                 .toList();
+    }
+
+    /**
+     * Maps all the properties into the specific type, this is an alias of the
+     * {@link Stream#map(Function)} which is longer when typed out.
+     *
+     * @param mappingFunction   The mapping function that should be provided by the
+     *                          type of class.
+     * @param <T>               The type of class to map into.
+     * @return                  A stream of the mapped properties.
+     */
+    public <T> Stream<T> map(Function<AlisaRssProperty, T> mappingFunction) {
+        return properties.stream().map(mappingFunction);
     }
 
 }

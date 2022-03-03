@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,11 +29,17 @@ public class AlisaHttpCall {
 
     private final Request request;
     private final CompletableFuture<Response> future = new CompletableFuture<>();
+
+    private final CompletableFuture<String> content = new CompletableFuture<>();
+    private final AtomicBoolean contentTransformation = new AtomicBoolean(true);
+
     private final AtomicLong initialTime = new AtomicLong(-1);
     private final AtomicLong timeTaken = new AtomicLong(-1);
+
     private final List<IOException> exceptions = new ArrayList<>();
     private final AtomicInteger retries = new AtomicInteger(0);
     private final AtomicInteger maximumRetries = new AtomicInteger(10);
+
     private final AtomicBoolean lock = new AtomicBoolean(false);
 
     /**
@@ -63,6 +70,19 @@ public class AlisaHttpCall {
     }
 
     /**
+     * Sets whether to allow {@link AlisaHttpCall} to transform the content
+     * to a {@link String} beforehand. This is an option because the body can only
+     * be read once in {@link OkHttp}.
+     *
+     * @param enabled   Should this option be enabled?
+     * @return          The {@link AlisaHttpCall} for chain-calling methods.
+     */
+    public AlisaHttpCall contentTransformation(boolean enabled) {
+        this.contentTransformation.set(enabled);
+        return this;
+    }
+
+    /**
      * Gets the total elapsed time that this call has been running.
      *
      * @return  The elapsed time that this call has been running.
@@ -88,6 +108,21 @@ public class AlisaHttpCall {
      */
     public List<IOException> exceptions(){
         return exceptions;
+    }
+
+    /**
+     * Gets the content of this request if the Http Call is enabled to
+     * read the content and transform to a {@link String} beforehand. This is
+     * enabled by default to allow ease of handling.
+     *
+     * @return  The future that may contain the content.
+     */
+    public CompletableFuture<String> content() {
+        if (!lock.get()) {
+            execute();
+        }
+
+        return content;
     }
 
     /**
@@ -127,8 +162,17 @@ public class AlisaHttpCall {
             }
 
             @Override
-            public void onResponse(@NotNull Call call, @NotNull Response response) {
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 timeTaken.set(System.nanoTime());
+
+                if (contentTransformation.get() && response.body() != null) {
+                    content.complete(Objects.requireNonNull(response.body()).string());
+                } else {
+                    content.completeExceptionally(
+                            new IOException("The content capture failed because the site didn't send content.")
+                    );
+                }
+
                 future.complete(response);
             }
         });

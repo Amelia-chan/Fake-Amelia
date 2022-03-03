@@ -2,7 +2,7 @@
 An open-source Discord bot that brings story updates right to your server's doorsteps, and also brings trending notifications 
 into your DMs to allow you to have a wake of surprise.
 
-# 📦 Modules
+## 📦 Modules
 Amelia has three child-modules under the "-chan" family prefix that all handle a specific area of tasks, 
 all of these modules are dependent to each other with the exception of Alisa-chan which is what all the other modules 
 depends on.
@@ -22,14 +22,14 @@ Alisa-chan is the main, shared, global module of Amelia which is among the most 
 for fetching, parsing and mapping the RSS feeds into an order that Akari-chan can understand and she also holds all the 
 knowledge for all the model types, database models, database methods and all other of those fancy stuff.
 
-# 🏟 Installation
+## 🏟 Installation
 This section will be written once all the methods are ready to go.
 
-# 🗡 Unit Testing
+## 🗡 Unit Testing
 Alisa and Akari has major unit testing that ensures that an RSS feed doesn't produce looping issues that can be bothersome 
 to fix and also nuking to many servers. You are required to run them after development by using the `mvn test` command.
 
-# 🥞 Requirements
+## 🥞 Requirements
 Amelia requires the following:
 - [x] JDK 17 or above
 - [x] MongoDB

@@ -1,0 +1,11 @@
+Amelia
+
+Amelia stands as the generic name for Amelia-chan's entire HTTP crawler. Amelia is used in only one site and crawls only
+the specific areas of the site: RSS Feed, Search Engine and the User Profile. The site, ScribbleHub, will be the only site
+that will be crawled by Amelia and will obey the current robots.txt implementation.
+
+How Amelia accesses ScribbleHub
+
+Amelia accesses ScribbleHub at either an interval time (10 minutes as of writing) or when a request for data is required
+that is requested by a user at the platform, Discord. Amelia will retry HttpRequests up to ten times before failing out which
+can explain an increase in requests.

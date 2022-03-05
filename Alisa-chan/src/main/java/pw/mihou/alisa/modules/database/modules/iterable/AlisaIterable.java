@@ -1,5 +1,6 @@
 package pw.mihou.alisa.modules.database.modules.iterable;
 
+import com.mongodb.Function;
 import com.mongodb.client.FindIterable;
 import org.bson.Document;
 
@@ -8,9 +9,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-public record AlisaIterable(
+public record AlisaIterable<Type>(
         FindIterable<Document> iterable,
-        List<AlisaIterableOperations> operations
+        List<AlisaIterableOperations> operations,
+        Function<Document, Type> mapper
 ) {
 
     /**
@@ -19,7 +21,7 @@ public record AlisaIterable(
      * @param operation The operation to include.
      * @return          The {@link AlisaIterable} for chain-calling methods.
      */
-    public AlisaIterable addOperation(AlisaIterableOperations operation) {
+    public AlisaIterable<Type> addOperation(AlisaIterableOperations operation) {
         operations.add(operation);
         return this;
     }
@@ -29,11 +31,11 @@ public record AlisaIterable(
      *
      * @return  The updated {@link FindIterable} instance.
      */
-    public AlisaIterable apply() {
+    public AlisaIterable<Type> apply() {
         AtomicReference<FindIterable<Document>> appliedIterable = new AtomicReference<>(iterable);
         operations.forEach(operation -> appliedIterable.getAndUpdate(operation::apply));
 
-        return new AlisaIterable(appliedIterable.get(), Collections.emptyList());
+        return new AlisaIterable<Type>(appliedIterable.get(), Collections.emptyList(), mapper);
     }
 
     /**
@@ -47,6 +49,31 @@ public record AlisaIterable(
         iterable.forEach(documents::add);
 
         return Collections.unmodifiableList(documents);
+    }
+
+    /**
+     * Maps the {@link Document}s of this iterable into its intended
+     * type by using a mapping function.
+     *
+     * @param mapper    The mapper to use to map the document into the specific type.
+     * @param <T>       The type to map the documents into.
+     * @return          A List of {@link T} mapped.
+     */
+    public <T> List<T> into(Function<Document, T> mapper) {
+        List<T> documents = new ArrayList<>();
+        iterable.forEach(document -> documents.add(mapper.apply(document)));
+
+        return Collections.unmodifiableList(documents);
+    }
+
+    /**
+     * Maps the {@link Document}s of this iterable into its intended type
+     * that was provided during the creation of this mapper.
+     *
+     * @return  A list of {@link Type} mapped.
+     */
+    public List<Type> into() {
+        return into(this.mapper);
     }
 
 }

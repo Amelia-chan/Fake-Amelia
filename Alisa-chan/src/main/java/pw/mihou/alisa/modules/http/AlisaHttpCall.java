@@ -24,7 +24,7 @@ public class AlisaHttpCall {
             .readTimeout(Duration.ofMinutes(5))
             .build();
 
-    private static final String USER_AGENT = "Amelia/2.0 (+http://www.github.com/Amelia-chan/Amelia/bot.txt)";
+    public static final String USER_AGENT = "Amelia/2.0 (+http://www.github.com/Amelia-chan/Amelia/bot.txt)";
     private static final Logger LOGGER = LoggerFactory.getLogger("Alisa - Http Client");
 
     private final Request request;

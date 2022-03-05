@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public record AlisaIterable<Type>(
         FindIterable<Document> iterable,
@@ -45,10 +47,18 @@ public record AlisaIterable<Type>(
      * @return  The list to collect.
      */
     public List<Document> toList() {
-        List<Document> documents = new ArrayList<>();
-        iterable.forEach(documents::add);
+        return StreamSupport.stream(iterable.spliterator(), false).toList();
+    }
 
-        return Collections.unmodifiableList(documents);
+    /**
+     * Maps all the {@link Document}s into their intended type before
+     * producing a list of them. A short-hand expression of {@link this#map()} and
+     * {@link Stream#toList()}.
+     *
+     * @return  A list of all the documents mapped into their type.
+     */
+    public List<Type> mapAndList() {
+        return map().toList();
     }
 
     /**
@@ -57,23 +67,20 @@ public record AlisaIterable<Type>(
      *
      * @param mapper    The mapper to use to map the document into the specific type.
      * @param <T>       The type to map the documents into.
-     * @return          A List of {@link T} mapped.
+     * @return          A stream of all the documents mapped into the specific type.
      */
-    public <T> List<T> into(Function<Document, T> mapper) {
-        List<T> documents = new ArrayList<>();
-        iterable.forEach(document -> documents.add(mapper.apply(document)));
-
-        return Collections.unmodifiableList(documents);
+    public <T> Stream<T> map(Function<Document, T> mapper) {
+        return StreamSupport.stream(iterable.spliterator(), false).map(mapper::apply);
     }
 
     /**
      * Maps the {@link Document}s of this iterable into its intended type
      * that was provided during the creation of this mapper.
      *
-     * @return  A list of {@link Type} mapped.
+     * @return  A stream of all the documents mapped into the specific type.
      */
-    public List<Type> into() {
-        return into(this.mapper);
+    public Stream<Type> map() {
+        return map(this.mapper);
     }
 
 }

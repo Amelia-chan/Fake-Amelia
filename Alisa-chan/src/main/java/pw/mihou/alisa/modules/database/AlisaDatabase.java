@@ -61,7 +61,7 @@ public interface AlisaDatabase<Type> {
      * @return      The received {@link Type} form the database if present.
      */
     default CompletableFuture<Optional<Type>> get(AlisaIndex index) {
-        return CompletableFuture.supplyAsync(() ->  {
+        return CompletableFuture.supplyAsync(() -> {
             Document document = collection().find(
                     Filters.eq(index.key(), index.value())
             ).first();
@@ -80,10 +80,10 @@ public interface AlisaDatabase<Type> {
      * @param index The index to use when querying the database.
      * @return      The received {@link Document} form the database if present.
      */
-    default CompletableFuture<AlisaIterable<Type>> all(AlisaIndex index) {
-        return CompletableFuture.supplyAsync(() ->  new AlisaIterable<>(collection().find(
+    default AlisaIterable<Type> all(AlisaIndex index) {
+        return new AlisaIterable<Type>(collection().find(
                 Filters.eq(index.key(), index.value())
-        ), new ArrayList<>(), this::translate));
+        ), new ArrayList<>(), this::translate);
     }
 
     /**
@@ -92,10 +92,10 @@ public interface AlisaDatabase<Type> {
      * @param indexes   The indexes to use when querying the database.
      * @return          The received {@link Document} form the database if present.
      */
-    default CompletableFuture<AlisaIterable<Type>> and(AlisaIndex... indexes) {
-        return CompletableFuture.supplyAsync(() ->  new AlisaIterable<>(collection().find(
+    default AlisaIterable<Type> and(AlisaIndex... indexes) {
+        return new AlisaIterable<>(collection().find(
                 Filters.and(Arrays.stream(indexes).map(index -> Filters.eq(index.key(), index.value())).toList())
-        ), new ArrayList<>(),  this::translate));
+        ), new ArrayList<>(),  this::translate);
     }
 
     /**
@@ -105,10 +105,10 @@ public interface AlisaDatabase<Type> {
      * @param values    The values that a document should match once.
      * @return          The received {@link Document} form the database if present.
      */
-    default CompletableFuture<AlisaIterable<Type>> all(String field, Object... values) {
-        return CompletableFuture.supplyAsync(() ->  new AlisaIterable<>(collection().find(
+    default AlisaIterable<Type> all(String field, Object... values) {
+        return new AlisaIterable<>(collection().find(
                 Filters.all(field, values)
-        ), new ArrayList<>(), this::translate));
+        ), new ArrayList<>(), this::translate);
     }
 
     /**
@@ -117,7 +117,7 @@ public interface AlisaDatabase<Type> {
      * @param indexes   The indexes to use when querying the database.
      * @return          The received {@link Document} form the database if present.
      */
-    default CompletableFuture<AlisaIterable<Type>> or(AlisaIndex... indexes) {
+    default AlisaIterable<Type> or(AlisaIndex... indexes) {
         return or(Arrays.stream(indexes).map(index -> Filters.eq(index.key(), index.value())).toArray(Bson[]::new));
     }
 
@@ -127,10 +127,10 @@ public interface AlisaDatabase<Type> {
      * @param filters   The filters to use when querying the database.
      * @return          The received {@link Document} form the database if present.
      */
-    default CompletableFuture<AlisaIterable<Type>> or(Bson... filters) {
-        return CompletableFuture.supplyAsync(() ->  new AlisaIterable<>(collection().find(
+    default AlisaIterable<Type> or(Bson... filters) {
+        return new AlisaIterable<>(collection().find(
                 Filters.and(filters)
-        ), new ArrayList<>(), this::translate));
+        ), new ArrayList<>(), this::translate);
     }
 
     /**
@@ -164,8 +164,8 @@ public interface AlisaDatabase<Type> {
      *
      * @return  All the data of the collection.
      */
-    default CompletableFuture<AlisaIterable<Type>> all() {
-        return CompletableFuture.supplyAsync(() -> new AlisaIterable<>(collection().find(), new ArrayList<>(), this::translate));
+    default AlisaIterable<Type> all() {
+        return new AlisaIterable<>(collection().find(), new ArrayList<>(), this::translate);
     }
 
     /**
@@ -173,8 +173,8 @@ public interface AlisaDatabase<Type> {
      *
      * @return  An iterable that is sorted by the latest order.
      */
-    default CompletableFuture<AlisaIterable<Type>> latest() {
-        return all().thenApply(iterable -> iterable.addOperation(AlisaIterableOperations.LATEST).apply());
+    default AlisaIterable<Type> latest() {
+        return all().addOperation(AlisaIterableOperations.LATEST).apply();
     }
 
     /**
@@ -203,8 +203,8 @@ public interface AlisaDatabase<Type> {
      *
      * @return  An iterable that is sorted by the oldest order.
      */
-    default CompletableFuture<AlisaIterable<Type>> oldest() {
-        return all().thenApply(iterable -> iterable.addOperation(AlisaIterableOperations.OLDEST));
+    default AlisaIterable<Type> oldest() {
+        return all().addOperation(AlisaIterableOperations.OLDEST);
     }
 
 }

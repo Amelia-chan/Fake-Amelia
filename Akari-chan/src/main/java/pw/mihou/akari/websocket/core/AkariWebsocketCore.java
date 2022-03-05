@@ -14,94 +14,93 @@ import pw.mihou.alisa.modules.exceptions.AlisaException;
 import pw.mihou.alisa.modules.exceptions.handler.AlisaExceptionHandler;
 
 import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AkariWebsocketCore implements AkariWebsocket {
 
     private static final List<AkariWebsocketListener> listeners = new ArrayList<>();
+
     private final BlockingQueue<AlisaMessage> messages = new LinkedBlockingQueue<>();
     private final Map<String, WsContext> sessions = new ConcurrentHashMap<>();
+
     private final Javalin javalin;
+
     private final AtomicBoolean open = new AtomicBoolean(false);
     private final AtomicBoolean closing = new AtomicBoolean(false);
 
     public AkariWebsocketCore() {
-        this.javalin = Javalin.create(config -> {
-            config.showJavalinBanner = false;
-        }).ws("/", config -> {
-            config.onConnect(connection -> {
-                if (closing.get()) {
-                    connection.closeSession(1013, AkariDefaultMessages.CLOSING_TIME);
-                    return;
-                }
+        this.javalin = Javalin.create(config -> config.showJavalinBanner = false)
+                .ws("/", config -> {
+                    config.onConnect(connection -> {
+                        if (closing.get()) {
+                            connection.closeSession(1013, AkariDefaultMessages.CLOSING_TIME);
+                            return;
+                        }
 
-                String authorization = connection.header("Authorization");
+                        String authorization = connection.header("Authorization");
 
-                if (Objects.isNull(authorization)) {
-                    connection.closeSession(1008, AkariDefaultMessages.INVALID_AUTHORIZATION);
-                    return;
-                }
+                        if (Objects.isNull(authorization)) {
+                            connection.closeSession(1008, AkariDefaultMessages.INVALID_AUTHORIZATION);
+                            return;
+                        }
 
-                if (!authorization.equals("BEARER " + AkariConfiguration.SECRET)) {
-                    connection.closeSession(1008, AkariDefaultMessages.INVALID_AUTHORIZATION);
-                    return;
-                }
+                        if (!authorization.equals("BEARER " + AkariConfiguration.SECRET)) {
+                            connection.closeSession(1008, AkariDefaultMessages.INVALID_AUTHORIZATION);
+                            return;
+                        }
 
-                sessions.put(connection.getSessionId(), connection);
-                Akari.getLogger().info(
-                        "A connection was established. [session={}, address={}]",
-                        connection.getSessionId(),
-                        connection.session.getRemoteAddress().toString()
-                );
+                        sessions.put(connection.getSessionId(), connection);
+                        Akari.getLogger().info(
+                                "A connection was established. [session={}, address={}]",
+                                connection.getSessionId(),
+                                connection.session.getRemoteAddress().toString()
+                        );
 
-                // This is to ensure that for every session added, the queue is
-                // started.
-                startQueue();
-            });
+                        // This is to ensure that for every session added, the queue is
+                        // started.
+                        startQueue();
+                    });
 
-            config.onClose(connection -> {
-                sessions.remove(connection.getSessionId());
-                Akari.getLogger().info(
-                        "A connection was closed. [session={}, address={}]",
-                        connection.getSessionId(),
-                        connection.session.getRemoteAddress().toString()
-                );
-            });
+                    config.onClose(connection -> {
+                        sessions.remove(connection.getSessionId());
+                        Akari.getLogger().info(
+                                "A connection was closed. [session={}, address={}]",
+                                connection.getSessionId(),
+                                connection.session.getRemoteAddress().toString()
+                        );
+                    });
 
-            config.onMessage(connection -> {
-                if (closing.get()) {
-                    connection.send(AkariDefaultMessages.UNACCEPTED_CLOSING);
-                    return;
-                }
+                    config.onMessage(connection -> {
+                        if (closing.get()) {
+                            connection.send(AkariDefaultMessages.UNACCEPTED_CLOSING);
+                            return;
+                        }
 
-                if (connection.message().equalsIgnoreCase("PING")) {
-                    connection.send("PONG");
-                    return;
-                }
+                        if (connection.message().equalsIgnoreCase("PING")) {
+                            connection.send("PONG");
+                            return;
+                        }
 
-                AkariWebsocketListenerRepository.send(connection);
-            });
+                        AkariWebsocketListenerRepository.send(connection);
+                    });
 
-            config.onError(connection ->{
-                Throwable error = connection.error();
-                if (error != null && error.getMessage() != null) {
-                    AlisaExceptionHandler.accept(error);
+                    config.onError(connection -> {
+                        Throwable error = connection.error();
+                        if (error != null && error.getMessage() != null) {
+                            AlisaExceptionHandler.accept(error);
 
-                    if (error.getMessage() == null) {
-                        this.send(connection.getSessionId(), new AlisaException(AkariDefaultMessages.UNKNOWN_EXCEPTION));
-                        return;
-                    }
+                            if (error.getMessage() == null) {
+                                this.send(connection.getSessionId(), new AlisaException(AkariDefaultMessages.UNKNOWN_EXCEPTION));
+                                return;
+                            }
 
-                    this.send(connection.getSessionId(), new AlisaException(error.getMessage()));
-                } else {
-                    this.send(connection.getSessionId(), new AlisaException(AkariDefaultMessages.UNKNOWN_EXCEPTION));
-                }
-            });
-        });
+                            this.send(connection.getSessionId(), new AlisaException(error.getMessage()));
+                        } else {
+                            this.send(connection.getSessionId(), new AlisaException(AkariDefaultMessages.UNKNOWN_EXCEPTION));
+                        }
+                    });
+                });
 
         Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
     }
@@ -134,7 +133,36 @@ public class AkariWebsocketCore implements AkariWebsocket {
 
     @Override
     public void stop() {
+        try {
+            if (closing.get()) {
+                return;
+            }
 
+            closing.set(true);
+            Akari.getLogger().info("The websocket is now performing graceful message sending...");
+            if (open.get()) {
+                return;
+            }
+
+            if (!messages.isEmpty()) {
+                startQueue();
+            }
+        } catch (JavalinException exception) {
+            AlisaExceptionHandler.accept(exception);
+        }
+    }
+
+    /**
+     * Pushes the stop execution after confirming that all messages were sent
+     * to their respective clients without an issue.
+     */
+    public void finishedQueueOnClosing() {
+        try {
+            Akari.getLogger().info("Closing websocket connection....");
+            javalin.stop();
+        } catch (JavalinException exception) {
+            AlisaExceptionHandler.accept(exception);
+        }
     }
 
     /**
@@ -142,40 +170,46 @@ public class AkariWebsocketCore implements AkariWebsocket {
      * broadcast channels.
      */
     private void startQueue() {
-        if (open.get()) {
-            return;
-        }
-
-        if (sessions.isEmpty()) {
-            Akari.getLogger().error("There are no sessions active on the socket, pushing all messages back until a session opens.");
-            return;
-        }
-
-        open.set(true);
-        while (!messages.isEmpty()) {
-            AlisaMessage message = messages.poll();
-
-            if (message != null) {
-                sessions.values().forEach(connection -> {
-                    try {
-                        String messageable = message.toMessageable(Akari.getMoshi());
-
-                        connection.send(messageable).get();
-                        Akari.getLogger().debug("A message was sent to a client. [session={}, message={}]",
-                                connection.getSessionId(),
-                                messageable
-                        );
-                    } catch (InterruptedException | ExecutionException e) {
-                        // Don't queue the message again since another client might have received it already.
-                        AlisaExceptionHandler.accept(e);
-                    }
-                });
-            } else {
-                AlisaExceptionHandler.accept(
-                        new NoSuchElementException("A message polled has returned null, what does that mean?")
-                );
+        CompletableFuture.runAsync(() -> {
+            if (open.get()) {
+                return;
             }
-        }
-        open.set(false);
+
+            if (sessions.isEmpty()) {
+                Akari.getLogger().error("There are no sessions active on the socket, pushing all messages back until a session opens.");
+                return;
+            }
+
+            open.set(true);
+            while (!messages.isEmpty()) {
+                AlisaMessage message = messages.poll();
+
+                if (message != null) {
+                    sessions.values().forEach(connection -> {
+                        try {
+                            String messageable = message.toMessageable(Akari.getMoshi());
+
+                            connection.send(messageable).get();
+                            Akari.getLogger().debug("A message was sent to a client. [session={}, message={}]",
+                                    connection.getSessionId(),
+                                    messageable
+                            );
+                        } catch (InterruptedException | ExecutionException e) {
+                            // Don't queue the message again since another client might have received it already.
+                            AlisaExceptionHandler.accept(e);
+                        }
+                    });
+                } else {
+                    AlisaExceptionHandler.accept(
+                            new NoSuchElementException("A message polled has returned null, what does that mean?")
+                    );
+                }
+            }
+            open.set(false);
+
+            if (closing.get()) {
+                finishedQueueOnClosing();
+            }
+        });
     }
 }

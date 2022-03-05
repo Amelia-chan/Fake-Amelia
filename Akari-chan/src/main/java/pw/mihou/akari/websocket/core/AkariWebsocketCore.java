@@ -80,7 +80,7 @@ public class AkariWebsocketCore implements AkariWebsocket {
                             return;
                         }
 
-                        AkariWebsocketListenerRepository.send(connection);
+                        AkariWebsocketListenerRepository.send(this, connection);
                     });
 
                     config.onError(connection -> {

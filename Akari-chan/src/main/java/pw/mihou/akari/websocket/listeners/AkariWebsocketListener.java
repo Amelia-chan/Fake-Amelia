@@ -1,6 +1,7 @@
 package pw.mihou.akari.websocket.listeners;
 
 import io.javalin.websocket.WsMessageContext;
+import pw.mihou.akari.websocket.facade.AkariWebsocket;
 
 public interface AkariWebsocketListener {
 
@@ -11,7 +12,7 @@ public interface AkariWebsocketListener {
      * @param connection    The connection that this event came from.
      * @param data          The data received from this event.
      */
-    void onMessage(WsMessageContext connection, String data);
+    void onMessage(AkariWebsocket websocket, WsMessageContext connection, String data);
 
     /**
      * Gets the class type that this listener accepts.

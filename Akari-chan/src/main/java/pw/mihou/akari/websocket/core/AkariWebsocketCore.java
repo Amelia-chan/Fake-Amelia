@@ -19,8 +19,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AkariWebsocketCore implements AkariWebsocket {
 
-    private static final List<AkariWebsocketListener> listeners = new ArrayList<>();
-
     private final BlockingQueue<AlisaMessage> messages = new LinkedBlockingQueue<>();
     private final Map<String, WsContext> sessions = new ConcurrentHashMap<>();
 

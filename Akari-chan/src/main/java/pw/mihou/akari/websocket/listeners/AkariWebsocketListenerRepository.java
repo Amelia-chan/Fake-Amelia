@@ -3,6 +3,7 @@ package pw.mihou.akari.websocket.listeners;
 import io.javalin.websocket.WsMessageContext;
 import org.json.JSONObject;
 import pw.mihou.akari.websocket.facade.AkariWebsocket;
+import pw.mihou.akari.websocket.listeners.modules.AkariOnTestRequest;
 import pw.mihou.alisa.modules.AlisaMessage;
 import pw.mihou.alisa.modules.exceptions.AlisaException;
 import pw.mihou.alisa.modules.threadpools.AlisaThreadPool;
@@ -13,6 +14,10 @@ import java.util.List;
 public class AkariWebsocketListenerRepository {
 
     public static final List<AkariWebsocketListener> listeners = new ArrayList<>();
+
+    static {
+        listeners.add(new AkariOnTestRequest());
+    }
 
     /**
      * Gets all the listener that matches the message that was received.

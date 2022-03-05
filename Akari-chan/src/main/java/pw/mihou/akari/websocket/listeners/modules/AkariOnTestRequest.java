@@ -6,7 +6,6 @@ import pw.mihou.akari.databases.AkariDatabases;
 import pw.mihou.akari.websocket.facade.AkariWebsocket;
 import pw.mihou.akari.websocket.listeners.AkariWebsocketListener;
 import pw.mihou.alisa.AlisaGlobal;
-import pw.mihou.alisa.modules.AlisaFeed;
 import pw.mihou.alisa.modules.database.modules.AlisaIndex;
 import pw.mihou.alisa.modules.exceptions.handler.AlisaExceptionHandler;
 import pw.mihou.alisa.modules.requests.AlisaTestRequest;
@@ -23,8 +22,13 @@ public class AkariOnTestRequest implements AkariWebsocketListener {
                     .adapter(AlisaTestRequest.class)
                     .fromJson(data));
 
-            AlisaFeed feed = AkariDatabases.FEEDS.get(new AlisaIndex("unique", request.unique())).join().orElseThrow();
-            AkariFeeds.getAndUpdate(feed).forEach(chapter -> websocket.send(connection.getSessionId(), chapter));
+            AkariFeeds.peek(AkariDatabases.FEEDS.get(new AlisaIndex("unique", request.unique()))
+                            .join()
+                            .orElseThrow()
+                    )
+                    .stream()
+                    .findFirst()
+                    .ifPresent(chapter -> websocket.send(connection.getSessionId(), chapter));
         } catch (Exception exception) {
             AlisaExceptionHandler.accept(exception);
         }

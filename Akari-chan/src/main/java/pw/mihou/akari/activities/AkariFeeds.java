@@ -69,6 +69,22 @@ public class AkariFeeds {
      * @return      All the new chapters that were received from the feed.
      */
     public static List<AlisaChapterItem> getAndUpdate(AlisaFeed feed) {
+        List<AlisaChapterItem> chapters =  peek(feed).stream()
+                .filter(chapter -> chapter.pubDate().after(feed.date()))
+                .toList();
+
+        chapters.stream().findFirst().ifPresent(chapter -> AkariDatabases.FEEDS.upsert(feed.date(chapter.pubDate())));
+        return chapters;
+    }
+
+    /**
+     * Peeks into the available feed data and returns the data without
+     * performing any filtration af any form.
+     *
+     * @param feed  The feed to peek into.
+     * @return      All the chapters that were available in the feed.
+     */
+    public static List<AlisaChapterItem> peek(AlisaFeed feed) {
         List<AlisaChapterItem> chapters = CACHE.getIfPresent(feed.url());
 
         if (chapters == null) {
@@ -78,11 +94,9 @@ public class AkariFeeds {
                     .thenApply(AlisaRssReader::fromContent)
                     .join()
                     .map(AlisaChapterItem::new)
-                    .filter(chapter -> chapter.pubDate().after(feed.date()))
                     .toList();
         }
 
-        chapters.stream().findFirst().ifPresent(chapter -> AkariDatabases.FEEDS.upsert(feed.date(chapter.pubDate())));
         return chapters;
     }
 

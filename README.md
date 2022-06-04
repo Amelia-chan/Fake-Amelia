@@ -1,4 +1,5 @@
-> **WARNING**
+> **Warning**
+> 
 > This repository contains the failed source code of a formerly-possible release candidate of Amelia. A newer Amelia will be created that will support a much better codebase will be created soon with a new dashboard and everything, please wait in the meantime!
 
 # Amelia

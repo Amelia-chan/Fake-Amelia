@@ -1,3 +1,6 @@
+> **WARNING**
+> This repository contains the failed source code of a formerly-possible release candidate of Amelia. A newer Amelia will be created that will support a much better codebase will be created soon with a new dashboard and everything, please wait in the meantime!
+
 # Amelia
 An open-source Discord bot that brings story updates right to your server's doorsteps, and also brings trending notifications 
 into your DMs to allow you to have a wake of surprise.
